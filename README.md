@@ -50,7 +50,7 @@ Main components:
 
 ### 1. Clone Repository
 
-git clone https://github.com/Concert-Ticket-Booking-Platform/concert-ticket-booking-be.git
+git clone https://github.com/Concert-Ticket-Booking-Platform/concert-ticket-booking-be.git  
 cd ConcertBooking
 
 ## 📖 API Documentation
