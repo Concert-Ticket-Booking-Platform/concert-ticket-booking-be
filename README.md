@@ -16,6 +16,7 @@ Main components:
 
 ## 📂 Project Structure
 
+```text
 ├── src/
 │ ├── ConcertBooking.API/ # Presentation Layer
 │ ├── ConcertBooking.Application/ # Application Layer
@@ -31,6 +32,7 @@ Main components:
 ├── ConcertBooking.sln
 ├── gitignore
 └── README.md
+```
 
 ## 🛠️ Tech Stack
 
@@ -48,7 +50,7 @@ Main components:
 
 ### 1. Clone Repository
 
-git clone <YOUR_REPOSITORY_URL>
+git clone https://github.com/Concert-Ticket-Booking-Platform/concert-ticket-booking-be.git
 cd ConcertBooking
 
 ## 📖 API Documentation
