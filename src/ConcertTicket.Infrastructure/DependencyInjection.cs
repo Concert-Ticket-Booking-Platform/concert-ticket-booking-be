@@ -1,4 +1,5 @@
-﻿using ConcertTicket.Infrastructure.Persistence;
+﻿using ConcertTicket.Application.Common.Interfaces;
+using ConcertTicket.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,8 @@ namespace ConcertTicket.Infrastructure
                 options.UseNpgsql(
                     configuration.GetConnectionString("DefaultConnection"));
             });
+
+            services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
             return services;
         }

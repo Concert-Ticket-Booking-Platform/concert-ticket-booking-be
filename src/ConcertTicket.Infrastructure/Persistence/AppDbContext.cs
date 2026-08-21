@@ -1,9 +1,10 @@
-﻿using ConcertTicket.Domain.Entities;
+﻿using ConcertTicket.Application.Common.Interfaces;
+using ConcertTicket.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConcertTicket.Infrastructure.Persistence
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : DbContext, IApplicationDbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options): base(options) { }
 
