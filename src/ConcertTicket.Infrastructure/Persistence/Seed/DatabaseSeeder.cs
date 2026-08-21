@@ -1,4 +1,5 @@
-﻿using ConcertTicket.Domain.Entities;
+﻿using ConcertTicket.Application.Common.Interfaces;
+using ConcertTicket.Domain.Entities;
 using ConcertTicket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,98 +7,121 @@ namespace ConcertTicket.Infrastructure.Persistence.Seed
 {
     public class DatabaseSeeder
     {
-        public static async Task SeedAsync(AppDbContext dbContext)
+        public static async Task SeedAsync(
+            AppDbContext dbContext,
+            IPasswordHasher passwordHasher)
         {
             await SeedRolesAsync(dbContext);
-
-            await SeedUsersAsync(dbContext);
-
+            await SeedUsersAsync(dbContext, passwordHasher);
             await SeedConcertAsync(dbContext);
-
             await SeedVouchersAsync(dbContext);
         }
 
-        private static async Task SeedRolesAsync(AppDbContext dbContext)
+        private static async Task SeedRolesAsync(
+            AppDbContext dbContext)
         {
             if (await dbContext.Roles.AnyAsync())
                 return;
 
             var roles = new[]
             {
-            new Role
-            {
-                Id = Guid.NewGuid(),
-                RoleName = "Customer"
-            },
-            new Role
-            {
-                Id = Guid.NewGuid(),
-                RoleName = "Operator"
-            },
-            new Role
-            {
-                Id = Guid.NewGuid(),
-                RoleName = "Admin"
-            }
-        };
+                new Role
+                {
+                    Id = Guid.NewGuid(),
+                    RoleName = "Customer"
+                },
+                new Role
+                {
+                    Id = Guid.NewGuid(),
+                    RoleName = "Operator"
+                },
+                new Role
+                {
+                    Id = Guid.NewGuid(),
+                    RoleName = "Admin"
+                }
+            };
 
             await dbContext.Roles.AddRangeAsync(roles);
             await dbContext.SaveChangesAsync();
         }
 
-        private static async Task SeedUsersAsync(AppDbContext dbContext)
+        private static async Task SeedUsersAsync(
+            AppDbContext dbContext,
+            IPasswordHasher passwordHasher)
         {
-            if (await dbContext.Users.AnyAsync())
-                return;
+            var customerRole = await dbContext.Roles
+                .SingleAsync(x => x.RoleName == "Customer");
 
             var operatorRole = await dbContext.Roles
-                .FirstOrDefaultAsync(x => x.RoleName == "Operator");
+                .SingleAsync(x => x.RoleName == "Operator");
 
             var adminRole = await dbContext.Roles
-                .FirstOrDefaultAsync(x => x.RoleName == "Admin");
-
-            if (operatorRole is null || adminRole is null)
-            {
-                throw new InvalidOperationException(
-                    "Required roles were not found.");
-            }
+                .SingleAsync(x => x.RoleName == "Admin");
 
             var now = DateTimeOffset.UtcNow;
 
-            var admin = new User
+            // Admin
+            if (!await dbContext.Users.AnyAsync(x => x.Username == "admin"))
             {
-                Id = Guid.NewGuid(),
-                Email = "admin@gmail.com",
-                Username = "admin",
-                Password = "12345",
-                IsActive = true,
-                CreatedAt = now,
-                RoleId = adminRole.Id
-            };
+                var admin = new User
+                {
+                    Id = Guid.NewGuid(),
+                    Username = "admin",
+                    Email = "admin@gmail.com",
+                    Password = passwordHasher.Hash("12345"),
+                    IsActive = true,
+                    CreatedAt = now,
+                    RoleId = adminRole.Id
+                };
 
-            var operation = new User
+                await dbContext.Users.AddAsync(admin);
+            }
+
+            // Operator
+            if (!await dbContext.Users.AnyAsync(x => x.Username == "operator"))
             {
-                Id = Guid.NewGuid(),
-                Email = "operator@gmail.com",
-                Username = "operator",
-                Password = "12345",
-                IsActive = true,
-                CreatedAt = now,
-                RoleId = operatorRole.Id
-            };
+                var operatorUser = new User
+                {
+                    Id = Guid.NewGuid(),
+                    Username = "operator",
+                    Email = "operator@gmail.com",
+                    Password = passwordHasher.Hash("12345"),
+                    IsActive = true,
+                    CreatedAt = now,
+                    RoleId = operatorRole.Id
+                };
 
-            await dbContext.Users.AddRangeAsync(admin, operation);
+                await dbContext.Users.AddAsync(operatorUser);
+            }
+
+            // Customer
+            if (!await dbContext.Users.AnyAsync(x => x.Username == "customer"))
+            {
+                var customer = new User
+                {
+                    Id = Guid.NewGuid(),
+                    Username = "customer",
+                    Email = "customer@gmail.com",
+                    Password = passwordHasher.Hash("12345"),
+                    IsActive = true,
+                    CreatedAt = now,
+                    RoleId = customerRole.Id
+                };
+
+                await dbContext.Users.AddAsync(customer);
+            }
 
             await dbContext.SaveChangesAsync();
         }
 
-        private static async Task SeedConcertAsync(AppDbContext dbContext)
+        private static async Task SeedConcertAsync(
+            AppDbContext dbContext)
         {
             if (await dbContext.Concerts.AnyAsync())
                 return;
 
             var admin = await dbContext.Users
-                .Include(x => x.Role)
                 .FirstOrDefaultAsync(x => x.Username == "admin");
 
             if (admin is null)
@@ -126,49 +150,70 @@ namespace ConcertTicket.Infrastructure.Persistence.Seed
 
             var categories = new[]
             {
-            new TicketCategory
-            {
-                Id = Guid.NewGuid(),
-                ConcertId = concertId,
-                Name = "VIP",
-                Price = 1500000,
-                TotalQuantity = 500,
-                AvailableQuantity = 500
-            },
-            new TicketCategory
-            {
-                Id = Guid.NewGuid(),
-                ConcertId = concertId,
-                Name = "Standard",
-                Price = 700000,
-                TotalQuantity = 2000,
-                AvailableQuantity = 2000
-            }
+                new TicketCategory
+                {
+                    Id = Guid.NewGuid(),
+                    ConcertId = concertId,
+                    Name = "VIP",
+                    Price = 1500000m,
+                    TotalQuantity = 500,
+                    AvailableQuantity = 500,
+                    ReservedQuantity = 0,
+                    SoldQuantity = 0,
+                    Status = TicketCategoryStatus.Active,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+
+                new TicketCategory
+                {
+                    Id = Guid.NewGuid(),
+                    ConcertId = concertId,
+                    Name = "Standard",
+                    Price = 700000m,
+                    TotalQuantity = 2000,
+                    AvailableQuantity = 2000,
+                    ReservedQuantity = 0,
+                    SoldQuantity = 0,
+                    Status = TicketCategoryStatus.Active,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
             };
 
             await dbContext.TicketCategories.AddRangeAsync(categories);
+
             await dbContext.SaveChangesAsync();
         }
 
-        private static async Task SeedVouchersAsync(AppDbContext dbContext)
+        private static async Task SeedVouchersAsync(
+            AppDbContext dbContext)
         {
             if (await dbContext.Vouchers.AnyAsync())
                 return;
+
+            var now = DateTimeOffset.UtcNow;
 
             var voucher = new Voucher
             {
                 Id = Guid.NewGuid(),
                 Code = "LAUNCH2026",
+                Name = "Launch Week 10% Off",
                 DiscountType = DiscountType.Percentage,
-                DiscountValue = 10,
+                DiscountValue = 10m,
+                MaxDiscountAmount = null,
                 UsageLimit = 1000,
                 UsedCount = 0,
-                StartsAt = DateTimeOffset.UtcNow,
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(30),
-                Status = VoucherStatus.Active
+                StartsAt = now,
+                ExpiresAt = now.AddDays(30),
+                Status = VoucherStatus.Active,
+                CreatedAt = now,
+                UpdatedAt = now
             };
 
             await dbContext.Vouchers.AddAsync(voucher);
+
+            await dbContext.SaveChangesAsync();
         }
     }
 }

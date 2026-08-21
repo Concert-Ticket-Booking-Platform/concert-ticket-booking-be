@@ -1,7 +1,7 @@
 ﻿using ConcertTicket.Application.Concerts.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ConcertTicket.Api;
+namespace ConcertTicket.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/concerts")]
