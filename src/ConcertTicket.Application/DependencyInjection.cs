@@ -19,7 +19,6 @@ public static class DependencyInjection
         services.AddScoped<IConcertService, ConcertService>();
         services.AddScoped<IVoucherService, VoucherService>();
         services.AddScoped<IBookingService, BookingService>();
-        services.AddScoped<IVoucherService, VoucherService>();
 
         return services;
     }

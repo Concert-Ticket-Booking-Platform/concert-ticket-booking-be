@@ -5,7 +5,7 @@ namespace ConcertTicket.Application.Bookings.DTOs;
 public sealed record CreateBookingResponse(
     Guid BookingId,
     string BookingCode,
-    BookingStatus Status,
+    string Status,
     decimal TotalAmount,
     decimal DiscountAmount,
     decimal FinalAmount,

@@ -21,6 +21,10 @@ public class InventoryRepository : IInventoryRepository
         int quantity,
         CancellationToken cancellationToken = default)
     {
+
+        if (quantity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(quantity));
+
         return await _dbContext.TicketCategories
             .Where(x =>
                 x.Id == ticketCategoryId &&
@@ -45,6 +49,10 @@ public class InventoryRepository : IInventoryRepository
         int quantity,
         CancellationToken cancellationToken = default)
     {
+
+        if (quantity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(quantity));
+
         return await _dbContext.TicketCategories
             .Where(x =>
                 x.Id == ticketCategoryId &&
@@ -68,6 +76,10 @@ public class InventoryRepository : IInventoryRepository
         int quantity,
         CancellationToken cancellationToken = default)
     {
+
+        if (quantity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(quantity));
+
         return await _dbContext.TicketCategories
             .Where(x =>
                 x.Id == ticketCategoryId &&

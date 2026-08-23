@@ -18,4 +18,9 @@ public interface IBookingService
     Task<IReadOnlyList<BookingDto>> GetAllBookingsAsync(
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<bool> CancelAsync(
+    Guid bookingId,
+    Guid userId,
+    CancellationToken cancellationToken);
 }

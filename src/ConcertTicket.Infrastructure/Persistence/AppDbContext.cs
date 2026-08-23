@@ -93,6 +93,20 @@ namespace ConcertTicket.Infrastructure.Persistence
                     cancellationToken);
         }
 
+        public async Task<int> ReleaseVoucherUsageAsync(Guid voucherId,
+            CancellationToken cancellationToken = default)
+        {
+            return await Vouchers
+                .Where(x =>
+                    x.Id == voucherId &&
+                    x.UsedCount > 0)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(
+                        x => x.UsedCount,
+                        x => x.UsedCount - 1),
+                    cancellationToken);
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(

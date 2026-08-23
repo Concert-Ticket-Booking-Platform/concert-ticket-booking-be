@@ -67,21 +67,38 @@ public sealed class BookingService : IBookingService
                 throw new InvalidOperationException(
                     "Concert is not available.");
 
-            var category = await _dbContext.TicketCategories
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    x =>
-                        x.Id == request.TicketCategoryId &&
-                        x.ConcertId == request.ConcertId &&
-                        x.Status == TicketCategoryStatus.Active,
-                    cancellationToken);
+            var categoryIds = request.Items
+            .Select(x => x.TicketCategoryId)
+            .Distinct()
+            .ToList();
 
-            if (category is null)
+            var categories = await _dbContext.TicketCategories
+            .AsNoTracking()
+            .Where(x =>
+                categoryIds.Contains(x.Id) &&
+                x.ConcertId == request.ConcertId &&
+                x.Status == TicketCategoryStatus.Active)
+            .ToListAsync(cancellationToken);
+
+            if (categories.Count != categoryIds.Count)
+            {
                 throw new InvalidOperationException(
-                    "Ticket category is not available.");
+                    "One or more ticket categories are not available.");
+            }
 
-            var subtotal =
-                category.Price * request.Quantity;
+            var categoryDictionary = categories
+                .ToDictionary(x => x.Id);
+
+            decimal totalAmount = 0;
+
+            foreach (var item in request.Items)
+            {
+                var category =
+                    categoryDictionary[item.TicketCategoryId];
+
+                totalAmount +=
+                    category.Price * item.Quantity;
+            }
 
             var discountAmount = 0m;
             Voucher? voucher = null;
@@ -101,19 +118,27 @@ public sealed class BookingService : IBookingService
                 discountAmount =
                     _voucherService.CalculateDiscount(
                         voucher,
-                        subtotal);
+                        totalAmount);
             }
 
-            var reserved =
-                await _inventoryRepository.ReserveAsync(
-                    request.TicketCategoryId,
-                    request.Quantity,
-                    cancellationToken);
+            // Reserve inventory for every ticket category.
+            foreach (var item in request.Items)
+            {
+                var reserved =
+                    await _inventoryRepository.ReserveAsync(
+                        item.TicketCategoryId,
+                        item.Quantity,
+                        cancellationToken);
 
-            if (reserved != 1)
-                throw new InvalidOperationException(
-                    "Not enough tickets available.");
+                if (reserved != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Not enough tickets available for category " +
+                        $"{item.TicketCategoryId}.");
+                }
+            }
 
+            // Consume voucher atomically with booking creation.
             if (voucher is not null)
             {
                 var consumed =
@@ -128,6 +153,7 @@ public sealed class BookingService : IBookingService
                 }
             }
 
+
             var now = DateTimeOffset.UtcNow;
 
             var booking = new Booking
@@ -137,12 +163,12 @@ public sealed class BookingService : IBookingService
                 BookingCode =
                     _bookingCodeGenerator.Generate(),
 
-                TotalAmount = subtotal,
+                TotalAmount = totalAmount,
 
                 DiscountAmount = discountAmount,
 
                 FinalAmount =
-                    subtotal - discountAmount,
+                    totalAmount - discountAmount,
 
                 Status =
                     BookingStatus.WaitingForPayment,
@@ -161,25 +187,33 @@ public sealed class BookingService : IBookingService
                 ConcertId = request.ConcertId
             };
 
-            var bookingItem = new BookingItem
+            foreach (var item in request.Items)
             {
-                Id = Guid.NewGuid(),
+                var category =
+                    categoryDictionary[item.TicketCategoryId];
 
-                Quantity = request.Quantity,
+                var bookingItem = new BookingItem
+                {
+                    Id = Guid.NewGuid(),
 
-                UnitPrice = category.Price,
+                    Quantity = item.Quantity,
 
-                Subtotal = subtotal,
+                    UnitPrice = category.Price,
 
-                CreatedAt = now,
+                    Subtotal =
+                        category.Price * item.Quantity,
 
-                TicketCategoryId =
-                    request.TicketCategoryId,
+                    CreatedAt = now,
 
-                BookingId = booking.Id
-            };
+                    TicketCategoryId =
+                        item.TicketCategoryId,
 
-            booking.BookingItems.Add(bookingItem);
+                    BookingId = booking.Id
+                };
+
+                booking.BookingItems.Add(
+                    bookingItem);
+            }
 
             if (voucher is not null)
             {
@@ -209,6 +243,96 @@ public sealed class BookingService : IBookingService
                 cancellationToken);
 
             return MapResponse(booking);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(
+                cancellationToken);
+
+            throw;
+        }
+    }
+
+    public async Task<bool> CancelAsync(
+    Guid bookingId,
+    Guid userId,
+    CancellationToken cancellationToken)
+    {
+        await _unitOfWork.BeginTransactionAsync(
+            cancellationToken);
+
+        try
+        {
+            var booking = await _dbContext.Bookings
+                .Include(x => x.BookingItems)
+                .Include(x => x.VoucherUsages)
+                .FirstOrDefaultAsync(
+                    x =>
+                        x.Id == bookingId &&
+                        x.UserId == userId,
+                    cancellationToken);
+
+            if (booking is null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(
+                    cancellationToken);
+
+                return false;
+            }
+
+            if (booking.Status != BookingStatus.WaitingForPayment)
+            {
+                await _unitOfWork.RollbackTransactionAsync(
+                    cancellationToken);
+
+                throw new InvalidOperationException(
+                    "Only bookings waiting for payment can be cancelled.");
+            }
+
+            var now = DateTimeOffset.UtcNow;
+
+            foreach (var item in booking.BookingItems)
+            {
+                var released =
+                    await _inventoryRepository.ReleaseAsync(
+                        item.TicketCategoryId,
+                        item.Quantity,
+                        cancellationToken);
+
+                if (released != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to release inventory for booking {booking.Id}.");
+                }
+            }
+
+            foreach (var usage in booking.VoucherUsages)
+            {
+                var released =
+                    await _dbContext.ReleaseVoucherUsageAsync(
+                        usage.VoucherId,
+                        cancellationToken);
+
+                if (released != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to release voucher usage for booking {booking.Id}.");
+                }
+            }
+
+            _dbContext.VoucherUsages.RemoveRange(
+                booking.VoucherUsages);
+
+            booking.Status = BookingStatus.Cancelled;
+            booking.UpdatedAt = now;
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
+
+            await _unitOfWork.CommitTransactionAsync(
+                cancellationToken);
+
+            return true;
         }
         catch
         {
@@ -257,6 +381,68 @@ public sealed class BookingService : IBookingService
         return bookings.Select(MapToDto).ToList();
     }
 
+
+    private static void ValidateRequest(
+        CreateBookingRequest request,
+        string idempotencyKey)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+            throw new ArgumentException(
+                "Idempotency-Key is required.");
+
+        if (request.ConcertId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "ConcertId is required.");
+        }
+
+        if (request.Items is null || request.Items.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one ticket category is required.");
+        }
+
+        var duplicateCategory =
+        request.Items
+            .GroupBy(x => x.TicketCategoryId)
+            .Any(x => x.Count() > 1);
+
+        if (duplicateCategory)
+        {
+            throw new ArgumentException(
+                "A ticket category cannot appear more than once.");
+        }
+
+        var totalQuantity =
+        request.Items.Sum(x => x.Quantity);
+
+        if (totalQuantity <= 0)
+        {
+            throw new ArgumentException(
+                "Total ticket quantity must be greater than zero.");
+        }
+
+        if (totalQuantity > 10)
+        {
+            throw new ArgumentException(
+                "Maximum 10 tickets per booking.");
+        }
+
+        if (request.Items.Any(x =>
+        x.TicketCategoryId == Guid.Empty))
+        {
+            throw new ArgumentException(
+                "TicketCategoryId is required.");
+        }
+
+        if (request.Items.Any(x =>
+            x.Quantity <= 0))
+        {
+            throw new ArgumentException(
+                "Ticket quantity must be greater than zero.");
+        }
+    }
+
     private static BookingDto MapToDto(Booking booking)
     {
         var items = booking.BookingItems.Select(x => new BookingItemDto(
@@ -284,30 +470,13 @@ public sealed class BookingService : IBookingService
         );
     }
 
-    private static void ValidateRequest(
-        CreateBookingRequest request,
-        string idempotencyKey)
-    {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-            throw new ArgumentException(
-                "Idempotency-Key is required.");
-
-        if (request.Quantity <= 0)
-            throw new ArgumentException(
-                "Quantity must be greater than zero.");
-
-        if (request.Quantity > 10)
-            throw new ArgumentException(
-                "Maximum 10 tickets per booking.");
-    }
-
     private static CreateBookingResponse MapResponse(
         Booking booking)
     {
         return new CreateBookingResponse(
             booking.Id,
             booking.BookingCode,
-            booking.Status,
+            booking.Status.ToString(),
             booking.TotalAmount,
             booking.DiscountAmount,
             booking.FinalAmount,

@@ -26,5 +26,7 @@ namespace ConcertTicket.Application.Common.Interfaces
             CancellationToken cancellationToken = default);
 
         Task<int> TryConsumeVoucherAsync(Guid voucherId, CancellationToken cancellationToken = default);
+
+        Task<int> ReleaseVoucherUsageAsync(Guid voucherId, CancellationToken cancellationToken = default);
     }
 }

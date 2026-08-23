@@ -3,6 +3,7 @@ using ConcertTicket.Application.Bookings.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using ConcertTicket.Api.Models;
 
 namespace ConcertTicket.Api.Controllers;
 
@@ -50,6 +51,25 @@ public sealed class BookingsController : ControllerBase
             result);
     }
 
+
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(
+    Guid id,
+    CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+
+        var result = await _bookingService.CancelAsync(
+            id,
+            userId,
+            cancellationToken);
+
+        if (!result)
+            return NotFound();
+
+        return NoContent();
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(
         Guid id,
@@ -64,7 +84,7 @@ public sealed class BookingsController : ControllerBase
 
         if (result is null)
         {
-            return NotFound(new ConcertTicket.Api.Models.ApiResponse<object>
+            return NotFound(new ApiResponse<object>
             {
                 Success = false,
                 Message = "Booking not found.",
@@ -72,7 +92,7 @@ public sealed class BookingsController : ControllerBase
             });
         }
 
-        return Ok(new ConcertTicket.Api.Models.ApiResponse<BookingDto>
+        return Ok(new ApiResponse<BookingDto>
         {
             Success = true,
             Data = result
@@ -89,7 +109,7 @@ public sealed class BookingsController : ControllerBase
             userId,
             cancellationToken);
 
-        return Ok(new ConcertTicket.Api.Models.ApiResponse<IReadOnlyList<BookingDto>>
+        return Ok(new ApiResponse<IReadOnlyList<BookingDto>>
         {
             Success = true,
             Data = result

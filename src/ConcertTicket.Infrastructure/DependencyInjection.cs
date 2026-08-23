@@ -1,4 +1,7 @@
-﻿using ConcertTicket.Application.Common.Interfaces;
+﻿using ConcertTicket.Application.Bookings.Interfaces;
+using ConcertTicket.Application.Bookings.Services;
+using ConcertTicket.Application.Common.Interfaces;
+using ConcertTicket.Infrastructure.BackgroundJobs;
 using ConcertTicket.Infrastructure.Persistence;
 using ConcertTicket.Infrastructure.Persistence.Repositories;
 using ConcertTicket.Infrastructure.Security;
@@ -23,13 +26,14 @@ namespace ConcertTicket.Infrastructure
 
             services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
-            services.AddScoped<IUnitOfWork>(provider =>
-              provider.GetRequiredService<AppDbContext>());
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.AddScoped<IInventoryRepository, InventoryRepository>();
             services.AddScoped<IBookingCodeGenerator, BookingCodeGenerator>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IJwtTokenService, JwtTokenService>();
+            services.AddScoped<IBookingExpirationService, BookingExpirationService>();
+            services.AddHostedService<BookingExpirationWorker>();
 
             return services;
         }

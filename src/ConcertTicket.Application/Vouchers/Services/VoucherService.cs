@@ -1,5 +1,6 @@
 ﻿using ConcertTicket.Application.Common.Interfaces;
 using ConcertTicket.Application.Vouchers.Interfaces;
+using ConcertTicket.Application.Vouchers.DTOs;
 using ConcertTicket.Domain.Entities;
 using ConcertTicket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -64,4 +65,27 @@ public sealed class VoucherService : IVoucherService
             Math.Max(discount, 0),
             subtotal);
     }
+
+    public async Task<IReadOnlyList<VoucherDto>> GetAllVouchersAsync(
+        CancellationToken cancellationToken)
+    {
+        var vouchers = await _dbContext.Vouchers
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return vouchers.Select(x => new VoucherDto(
+            x.Id,
+            x.Code,
+            x.Name,
+            x.DiscountType.ToString(),
+            x.DiscountValue,
+            x.MaxDiscountAmount,
+            x.UsageLimit,
+            x.UsedCount,
+            x.StartsAt,
+            x.ExpiresAt,
+            x.Status.ToString()
+        )).ToList();
+    } 
 }
