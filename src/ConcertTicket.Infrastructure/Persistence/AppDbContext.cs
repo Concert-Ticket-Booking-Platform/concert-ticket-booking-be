@@ -2,14 +2,11 @@
 using ConcertTicket.Domain.Entities;
 using ConcertTicket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ConcertTicket.Infrastructure.Persistence
 {
-    public class AppDbContext : DbContext, IApplicationDbContext, IUnitOfWork
+    public class AppDbContext : DbContext, IApplicationDbContext
     {
-        private IDbContextTransaction? _currentTransaction;
-
 
         public AppDbContext(DbContextOptions<AppDbContext> options): base(options) { }
 
@@ -24,57 +21,6 @@ namespace ConcertTicket.Infrastructure.Persistence
         public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
-        public async Task BeginTransactionAsync(
-        CancellationToken cancellationToken = default)
-        {
-            if (_currentTransaction != null)
-                return;
-
-            _currentTransaction =
-                await Database.BeginTransactionAsync(
-                    cancellationToken);
-        }
-
-        public async Task CommitTransactionAsync(
-        CancellationToken cancellationToken = default)
-        {
-            if (_currentTransaction == null)
-                return;
-
-            try
-            {
-                await SaveChangesAsync(cancellationToken);
-
-                await _currentTransaction.CommitAsync(
-                    cancellationToken);
-            }
-            catch
-            {
-                await RollbackTransactionAsync(
-                    cancellationToken);
-
-                throw;
-            }
-            finally
-            {
-                await _currentTransaction.DisposeAsync();
-                _currentTransaction = null;
-            }
-        }
-
-        public async Task RollbackTransactionAsync(
-        CancellationToken cancellationToken = default)
-        {
-            if (_currentTransaction == null)
-                return;
-
-            await _currentTransaction.RollbackAsync(
-                cancellationToken);
-
-            await _currentTransaction.DisposeAsync();
-
-            _currentTransaction = null;
-        }
 
         /// <summary>
         /// Attempts to consume a voucher by incrementing its UsedCount if it is active and has not reached its usage limit.
