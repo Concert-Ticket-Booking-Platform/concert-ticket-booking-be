@@ -28,7 +28,7 @@ namespace ConcertTicket.Domain.Entities
 
         public DateTimeOffset CreatedAt { get; set; }
 
-        public DateTimeOffset UpdatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
 
         public ICollection<VoucherUsage> Usages { get; set; }
             = new List<VoucherUsage>();

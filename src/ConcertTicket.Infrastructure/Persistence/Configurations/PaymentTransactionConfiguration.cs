@@ -25,11 +25,24 @@ namespace ConcertTicket.Infrastructure.Persistence.Configurations
                 .HasColumnName("order_code");
 
             builder.Property(x => x.Provider)
-                .HasColumnName("provider")
-                .HasMaxLength(100);
+            .HasColumnName("provider")
+            .HasConversion<string>()
+            .HasMaxLength(30);
+
+
+            builder.Property(x => x.TransactionReference)
+            .HasColumnName("transaction_reference")
+            .HasMaxLength(200);
+
+            builder.Property(x => x.ResponsePayload)
+            .HasColumnName("response_payload")
+            .HasColumnType("jsonb");
 
             builder.Property(x => x.PaidAt)
                 .HasColumnName("paid_at");
+
+            builder.Property(x => x.ExpiredAt)
+            .HasColumnName("expired_at");
 
             builder.Property(x => x.CreatedAt)
                 .HasColumnName("created_at");

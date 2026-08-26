@@ -12,13 +12,19 @@ namespace ConcertTicket.Domain.Entities
 
         public long OrderCode { get; set; }
 
-        public string Provider { get; set; } = null!;
+        public PaymentProvider Provider { get; set; }
+
+        public string? TransactionReference { get; set; }
+
+        public string? ResponsePayload { get; set; }
 
         public DateTimeOffset? PaidAt { get; set; }
 
+        public DateTimeOffset? ExpiredAt { get; set; }
+
         public DateTimeOffset CreatedAt { get; set; }
 
-        public DateTimeOffset UpdatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
 
         public Guid BookingId { get; set; }
 

@@ -22,7 +22,7 @@ namespace ConcertTicket.Domain.Entities
 
         public DateTimeOffset CreatedAt { get; set; }
 
-        public DateTimeOffset UpdatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
 
         public Guid ConcertId { get; set; }
 

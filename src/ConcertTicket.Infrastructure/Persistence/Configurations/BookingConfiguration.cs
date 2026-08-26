@@ -43,6 +43,12 @@ namespace ConcertTicket.Infrastructure.Persistence.Configurations
             builder.Property(x => x.CompletedAt)
                 .HasColumnName("completed_at");
 
+            builder.Property(x => x.CreatedAt)
+                .HasColumnName("created_at");
+
+            builder.Property(x => x.UpdatedAt)
+                .HasColumnName("updated_at");
+
             builder.Property(x => x.IdempotencyKey)
                 .HasColumnName("idempotency_key")
                 .HasMaxLength(255)
