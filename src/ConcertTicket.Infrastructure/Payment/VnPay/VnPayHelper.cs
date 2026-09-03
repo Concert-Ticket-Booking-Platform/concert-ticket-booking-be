@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using System.Net;
 
 namespace ConcertTicket.Infrastructure.Payment.VnPay;
 
@@ -9,61 +10,64 @@ public static class VnPayHelper
         string key,
         string data)
     {
-        var keyBytes =
-            Encoding.UTF8.GetBytes(key);
+        var keyBytes = Encoding.UTF8.GetBytes(key);
+        var dataBytes = Encoding.UTF8.GetBytes(data);
 
-        var dataBytes =
-            Encoding.UTF8.GetBytes(data);
+        using var hmac = new HMACSHA512(keyBytes);
 
-        using var hmac =
-            new HMACSHA512(keyBytes);
-
-        var hash =
-            hmac.ComputeHash(dataBytes);
+        var hash = hmac.ComputeHash(dataBytes);
 
         return Convert.ToHexString(hash)
             .ToLowerInvariant();
     }
 
-    public static string BuildQueryString(
-        SortedDictionary<string, string> parameters)
-    {
-        return string.Join(
-            "&",
-            parameters
-                .Where(x =>
-                    !string.IsNullOrWhiteSpace(x.Value))
-                .Select(x =>
-                    $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}"));
-    }
-
-    //public static string BuildHashData(
-    //    SortedDictionary<string, string> parameters)
-    //{
-    //    return string.Join(
-    //        "&",
-    //        parameters
-    //            .Where(x =>
-    //                !string.IsNullOrWhiteSpace(x.Value))
-    //            .Select(x =>
-    //                $"{x.Key}={x.Value}"));
-    //}
-
     public static string BuildHashData(
         SortedDictionary<string, string> parameters)
     {
-        return string.Join(
-            "&",
-            parameters
-                .Where(x => !string.IsNullOrWhiteSpace(x.Value))
-                .Select(x =>
-                    $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}"));
+        var builder = new StringBuilder();
+
+        foreach (var pair in parameters)
+        {
+            if (string.IsNullOrEmpty(pair.Value))
+                continue;
+
+            if (builder.Length > 0)
+                builder.Append('&');
+
+            // Use application/x-www-form-urlencoded encoding for hash data (spaces => '+')
+            builder.Append(WebUtility.UrlEncode(pair.Key));
+            builder.Append('=');
+            builder.Append(WebUtility.UrlEncode(pair.Value));
+        }
+
+        return builder.ToString();
+    }
+
+    public static string BuildQueryString(
+        SortedDictionary<string, string> parameters)
+    {
+        var builder = new StringBuilder();
+
+        foreach (var pair in parameters)
+        {
+            if (string.IsNullOrEmpty(pair.Value))
+                continue;
+
+            if (builder.Length > 0)
+                builder.Append('&');
+
+            builder.Append(WebUtility.UrlEncode(pair.Key));
+            builder.Append('=');
+            builder.Append(WebUtility.UrlEncode(pair.Value));
+        }
+
+        return builder.ToString();
     }
 
     public static bool VerifySignature(
-    string hashSecret,
-    IDictionary<string, string> parameters,
-    string receivedSignature)
+        string hashSecret,
+        IDictionary<string, string> parameters,
+        string receivedSignature)
     {
         if (string.IsNullOrWhiteSpace(hashSecret) ||
             string.IsNullOrWhiteSpace(receivedSignature))
@@ -71,42 +75,35 @@ public static class VnPayHelper
             return false;
         }
 
-        var hashParameters =
+        var sortedParameters =
             new SortedDictionary<string, string>(
                 StringComparer.Ordinal);
 
-        foreach (var parameter in parameters)
+        foreach (var pair in parameters)
         {
-            if (string.Equals(
-                    parameter.Key,
+            if (pair.Key.Equals(
                     "vnp_SecureHash",
                     StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(
-                    parameter.Key,
+                pair.Key.Equals(
                     "vnp_SecureHashType",
                     StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(parameter.Value))
-            {
+            if (string.IsNullOrEmpty(pair.Value))
                 continue;
-            }
 
-            hashParameters[parameter.Key] = parameter.Value;
+            sortedParameters[pair.Key] = pair.Value;
         }
 
-        var hashData = BuildHashData(hashParameters);
+        var hashData = BuildHashData(sortedParameters);
 
-        var expectedSignature =
-            HmacSha512(
-                hashSecret,
-                hashData);
+        var expectedSignature = HmacSha512(hashSecret, hashData);
 
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(expectedSignature),
-            Encoding.UTF8.GetBytes(
-                receivedSignature.Trim().ToLowerInvariant()));
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature);
+        var receivedBytes = Encoding.UTF8.GetBytes(receivedSignature.Trim().ToLowerInvariant());
+
+        return CryptographicOperations.FixedTimeEquals(expectedBytes, receivedBytes);
     }
 }
