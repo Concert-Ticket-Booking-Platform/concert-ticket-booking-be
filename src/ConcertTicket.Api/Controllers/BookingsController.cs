@@ -14,8 +14,7 @@ public sealed class BookingsController : ControllerBase
 {
     private readonly IBookingService _bookingService;
 
-    public BookingsController(
-        IBookingService bookingService)
+    public BookingsController(IBookingService bookingService)
     {
         _bookingService = bookingService;
     }

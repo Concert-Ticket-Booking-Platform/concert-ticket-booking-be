@@ -2,6 +2,7 @@
 using ConcertTicket.Application.Bookings.Services;
 using ConcertTicket.Application.Common.Interfaces;
 using ConcertTicket.Infrastructure.BackgroundJobs;
+using ConcertTicket.Infrastructure.Payment.VnPay;
 using ConcertTicket.Infrastructure.Persistence;
 using ConcertTicket.Infrastructure.Persistence.Repositories;
 using ConcertTicket.Infrastructure.Security;
@@ -34,6 +35,7 @@ namespace ConcertTicket.Infrastructure
             services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IBookingExpirationService, BookingExpirationService>();
             services.AddHostedService<BookingExpirationWorker>();
+            services.AddScoped<IPaymentProvider, VnPayService>();
 
             return services;
         }

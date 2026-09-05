@@ -1,19 +1,35 @@
-﻿using ConcertTicket.Infrastructure;
+﻿using ConcertTicket.Api.Middlewares;
+using ConcertTicket.Application;
+using ConcertTicket.Application.Common.Interfaces;
+using ConcertTicket.Infrastructure;
+using ConcertTicket.Infrastructure.Payment.VnPay;
 using ConcertTicket.Infrastructure.Persistence;
 using ConcertTicket.Infrastructure.Persistence.Seed;
-using ConcertTicket.Application;
-using System.Text;
 using ConcertTicket.Infrastructure.Security;
+using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using ConcertTicket.Application.Common.Interfaces;
-using DotNetEnv;
-using ConcertTicket.Api.Middlewares;
+using System.Text;
 
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+// 2. Tự động thay thế các chuỗi dạng ${VARIABLE} trong Configuration
+foreach (var item in builder.Configuration.AsEnumerable())
+{
+    if (item.Value is string value && value.StartsWith("${") && value.EndsWith("}"))
+    {
+        var envKey = value[2..^1]; // Lấy tên biến bên trong ${...}
+        var envValue = Environment.GetEnvironmentVariable(envKey);
+        if (!string.IsNullOrEmpty(envValue))
+        {
+            builder.Configuration[item.Key] = envValue;
+        }
+    }
+}
 
 builder.Configuration.AddEnvironmentVariables();
 
@@ -48,31 +64,38 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.Configure<JwtOptions>(options =>
-{
-    builder.Configuration.GetSection("Jwt").Bind(options);
-    
-    var envSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
-    if (!string.IsNullOrEmpty(envSecret)) options.Secret = envSecret;
-    
-    var envIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
-    if (!string.IsNullOrEmpty(envIssuer)) options.Issuer = envIssuer;
-    
-    var envAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
-    if (!string.IsNullOrEmpty(envAudience)) options.Audience = envAudience;
-});
 
-var jwtOptions = new JwtOptions();
-builder.Configuration.GetSection("Jwt").Bind(jwtOptions);
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<VnPayOptions>(builder.Configuration.GetSection("VNPay"));
 
-var secret = Environment.GetEnvironmentVariable("JWT_SECRET");
-if (!string.IsNullOrEmpty(secret)) jwtOptions.Secret = secret;
+// Đọc JwtOptions đã bind từ Configuration để config Authentication Middleware
+var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
 
-var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
-if (!string.IsNullOrEmpty(issuer)) jwtOptions.Issuer = issuer;
+//builder.Services.Configure<JwtOptions>(options =>
+//{
+//    builder.Configuration.GetSection("Jwt").Bind(options);
 
-var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
-if (!string.IsNullOrEmpty(audience)) jwtOptions.Audience = audience;
+//    var envSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+//    if (!string.IsNullOrEmpty(envSecret)) options.Secret = envSecret;
+
+//    var envIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
+//    if (!string.IsNullOrEmpty(envIssuer)) options.Issuer = envIssuer;
+
+//    var envAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+//    if (!string.IsNullOrEmpty(envAudience)) options.Audience = envAudience;
+//});
+
+//var jwtOptions = new JwtOptions();
+//builder.Configuration.GetSection("Jwt").Bind(jwtOptions);
+
+//var secret = Environment.GetEnvironmentVariable("JWT_SECRET");
+//if (!string.IsNullOrEmpty(secret)) jwtOptions.Secret = secret;
+
+//var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
+//if (!string.IsNullOrEmpty(issuer)) jwtOptions.Issuer = issuer;
+
+//var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+//if (!string.IsNullOrEmpty(audience)) jwtOptions.Audience = audience;
 
 builder.Services
     .AddAuthentication(
