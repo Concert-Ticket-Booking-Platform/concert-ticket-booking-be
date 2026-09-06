@@ -60,6 +60,7 @@ public sealed class VnPayService : IPaymentProvider
                     "Payment expiration time is invalid."));
         }
 
+        // VNPay expects amount in VND x 100.
         var amount =
             Convert.ToInt64(
                 decimal.Round(
@@ -128,11 +129,7 @@ public sealed class VnPayService : IPaymentProvider
             parameters.Count == 0)
         {
             return Task.FromResult(
-                new PaymentCallbackResult(
-                    false,
-                    false,
-                    null,
-                    null));
+                InvalidCallback());
         }
 
         if (!parameters.TryGetValue(
@@ -140,11 +137,7 @@ public sealed class VnPayService : IPaymentProvider
                 out var receivedSignature))
         {
             return Task.FromResult(
-                new PaymentCallbackResult(
-                    false,
-                    false,
-                    null,
-                    null));
+                InvalidCallback());
         }
 
         var isValid =
@@ -156,12 +149,30 @@ public sealed class VnPayService : IPaymentProvider
         if (!isValid)
         {
             return Task.FromResult(
-                new PaymentCallbackResult(
-                    false,
-                    false,
-                    null,
-                    null));
+                InvalidCallback());
         }
+
+        if (!parameters.TryGetValue(
+                "vnp_Amount",
+                out var amountText) ||
+            !long.TryParse(
+                amountText,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var vnpAmount))
+        {
+            return Task.FromResult(
+                InvalidCallback());
+        }
+
+        if (vnpAmount < 0 ||
+            vnpAmount % 100 != 0)
+        {
+            return Task.FromResult(
+                InvalidCallback());
+        }
+
+        var amount = vnpAmount / 100;
 
         parameters.TryGetValue(
             "vnp_TransactionNo",
@@ -193,8 +204,20 @@ public sealed class VnPayService : IPaymentProvider
             new PaymentCallbackResult(
                 true,
                 isSuccess,
+                amount,
                 transactionReference,
                 responsePayload));
+    }
+
+
+    private static PaymentCallbackResult InvalidCallback()
+    {
+        return new PaymentCallbackResult(
+            IsValid: false,
+            IsSuccess: false,
+            Amount: null,
+            TransactionReference: null,
+            ResponsePayload: null);
     }
 
     private void ValidateConfiguration()
