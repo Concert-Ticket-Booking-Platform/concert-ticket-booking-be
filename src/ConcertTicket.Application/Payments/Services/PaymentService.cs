@@ -205,6 +205,29 @@ public sealed class PaymentService : IPaymentService
                 return;
             }
 
+            // Provider callback must contain amount.
+            if (!callback.Amount.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "Payment callback amount is missing.");
+            }
+
+            // Amount must match our payment transaction.
+            if (payment.Amount != callback.Amount.Value)
+            {
+                payment.Status = PaymentStatus.Failed;
+                payment.UpdatedAt = DateTimeOffset.UtcNow;
+                payment.ResponsePayload = callback.ResponsePayload;
+
+                await _dbContext.SaveChangesAsync(
+                    cancellationToken);
+
+                await _unitOfWork.CommitTransactionAsync(
+                    cancellationToken);
+
+                return;
+            }
+
             if (!callback.IsSuccess)
             {
                 payment.Status = PaymentStatus.Failed;

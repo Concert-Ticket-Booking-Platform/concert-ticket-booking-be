@@ -4,6 +4,7 @@ using ConcertTicket.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace ConcertTicket.Api.Controllers;
 
@@ -40,6 +41,28 @@ public sealed class PaymentsController : ControllerBase
                 cancellationToken);
 
         return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("momo-ipn")]
+    public async Task<IActionResult> MoMoIpn(
+        [FromBody] Dictionary<string, JsonElement> body,
+        CancellationToken cancellationToken)
+    {
+        var parameters = body.ToDictionary(
+            x => x.Key,
+            x => x.Value.ToString(),
+            StringComparer.Ordinal);
+
+        await _paymentService.HandleCallbackAsync(
+            PaymentProvider.MoMo,
+            parameters,
+            cancellationToken);
+
+        return Ok(new
+        {
+            success = true
+        });
     }
 
     [AllowAnonymous]
