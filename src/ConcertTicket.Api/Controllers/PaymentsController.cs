@@ -66,6 +66,36 @@ public sealed class PaymentsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [HttpGet("momo-return")]
+    public async Task<ActionResult<PaymentReturnResponse>> MoMoReturn(
+        [FromQuery] Dictionary<string, string> parameters,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _paymentService.HandleReturnAsync(
+                PaymentProvider.MoMo,
+                parameters,
+                cancellationToken);
+
+        return Ok(result);
+    }
+
+    //[AllowAnonymous]
+    //[HttpGet("vnpay-return")]
+    //public async Task<ActionResult<PaymentReturnResponse>> VnPayReturn(
+    //[FromQuery] Dictionary<string, string> parameters,
+    //CancellationToken cancellationToken)
+    //{
+    //    var result =
+    //        await _paymentService.HandleReturnAsync(
+    //            PaymentProvider.VNPay,
+    //            parameters,
+    //            cancellationToken);
+
+    //    return Ok(result);
+    //}
+
+    [AllowAnonymous]
     [HttpGet("vnpay-return")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> VnPayReturn(

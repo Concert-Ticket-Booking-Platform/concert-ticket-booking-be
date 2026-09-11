@@ -4,6 +4,7 @@ using ConcertTicket.Application.Payments.Interfaces;
 using ConcertTicket.Domain.Entities;
 using ConcertTicket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace ConcertTicket.Application.Payments.Services;
 
@@ -315,6 +316,78 @@ public sealed class PaymentService : IPaymentService
         }
     }
 
+    public async Task<PaymentReturnResponse> HandleReturnAsync(
+        PaymentProvider provider,
+        IDictionary<string, string> parameters,
+        CancellationToken cancellationToken)
+    {
+        var paymentProvider = _providers.FirstOrDefault(
+            x => x.Provider == provider);
+
+        if (paymentProvider is null)
+        {
+            throw new InvalidOperationException(
+                "Payment provider is not supported.");
+        }
+
+        var callback =
+            await paymentProvider.ProcessCallbackAsync(
+                parameters,
+                cancellationToken);
+
+        if (!callback.IsValid)
+        {
+            throw new InvalidOperationException(
+                "Invalid payment return.");
+        }
+
+        if (!long.TryParse(
+                GetOrderCode(provider, parameters),
+                out var orderCode))
+        {
+            throw new InvalidOperationException(
+                "Invalid order code.");
+        }
+
+        var payment = await _dbContext.PaymentTransactions
+            .Include(x => x.Booking)
+            .FirstOrDefaultAsync(
+                x =>
+                    x.OrderCode == orderCode &&
+                    x.Provider == provider,
+                cancellationToken);
+
+        if (payment is null)
+        {
+            throw new InvalidOperationException(
+                "Payment transaction was not found.");
+        }
+
+        return new PaymentReturnResponse(
+            Success:
+                payment.Status == PaymentStatus.Paid,
+
+            Message:
+                payment.Status == PaymentStatus.Paid
+                    ? "Payment completed successfully."
+                    : "Payment has not been completed.",
+
+            OrderCode:
+                payment.OrderCode.ToString(
+                    CultureInfo.InvariantCulture),
+
+            BookingCode:
+                payment.Booking.BookingCode,
+
+            Amount:
+                payment.Amount,
+
+            PaymentMethod:
+                provider.ToString(),
+
+            TransactionReference:
+                payment.TransactionReference);
+    }
 
     private static long GenerateOrderCode()
     {

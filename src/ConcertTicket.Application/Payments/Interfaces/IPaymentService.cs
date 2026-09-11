@@ -16,4 +16,9 @@ public interface IPaymentService
         PaymentProvider provider,
         IDictionary<string, string> parameters,
         CancellationToken cancellationToken);
+
+    Task<PaymentReturnResponse> HandleReturnAsync(
+        PaymentProvider provider,
+        IDictionary<string, string> parameters,
+        CancellationToken cancellationToken);
 }
