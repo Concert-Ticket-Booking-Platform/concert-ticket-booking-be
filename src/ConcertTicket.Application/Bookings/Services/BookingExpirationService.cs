@@ -2,6 +2,7 @@
 using ConcertTicket.Application.Common.Interfaces;
 using ConcertTicket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ConcertTicket.Application.Bookings.Services;
 
@@ -11,15 +12,18 @@ public sealed class BookingExpirationService
     private readonly IApplicationDbContext _dbContext;
     private readonly IInventoryRepository _inventoryRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<BookingExpirationService> _logger;
 
     public BookingExpirationService(
         IApplicationDbContext dbContext,
         IInventoryRepository inventoryRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<BookingExpirationService> logger)
     {
         _dbContext = dbContext;
         _inventoryRepository = inventoryRepository;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<int> ExpireBookingsAsync(
@@ -54,8 +58,10 @@ public sealed class BookingExpirationService
             {
                 // One failed booking should not stop
                 // the worker from processing others.
-                Console.WriteLine(
-                    $"Failed to expire booking {bookingId}: {ex}");
+                _logger.LogError(
+                    ex,
+                    "Failed to expire booking {BookingId}.",
+                    bookingId);
             }
         }
 
