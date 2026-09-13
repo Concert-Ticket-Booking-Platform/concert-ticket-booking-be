@@ -18,18 +18,18 @@ Main components:
 
 ```text
 ├── src/
-│ ├── ConcertBooking.API/ # Presentation Layer
-│ ├── ConcertBooking.Application/ # Application Layer
-│ ├── ConcertBooking.Domain/ # Domain Layer
-│ └── ConcertBooking.Infrastructure/ # Infrastructure Layer
+│ ├── ConcertTicket.API/ # Presentation Layer
+│ ├── ConcertTicket.Application/ # Application Layer
+│ ├── ConcertTicket.Domain/ # Domain Layer
+│ └── ConcertTicket.Infrastructure/ # Infrastructure Layer
 ├── workers/
-│ └── ConcertBooking.Worker/ # Background Worker
+│ └── ConcertTicket.Worker/ # Background Worker
 ├── tests/
-│ └── ConcertBooking.UnitTests/ # Unit Tests
+│ └── ConcertTicket.UnitTests/ # Unit Tests
 ├── migrations/ # EF Core Migrations / SQL Scripts
 ├── docs/ # Architecture, ERD & Technical Documents
 ├── docker-compose.yml # Local Infrastructure Setup
-├── ConcertBooking.sln
+├── ConcertTicketPlatform.sln
 ├── gitignore
 └── README.md
 ```
@@ -50,11 +50,13 @@ Main components:
 
 ### 1. Clone Repository
 
-git clone https://github.com/Concert-Ticket-Booking-Platform/concert-ticket-booking-be.git  
+```bash
+git clone https://github.com/Concert-Ticket-Booking-Platform/concert-ticket-booking-be.git
 cd ConcertBooking
+```
 
 ## 📖 API Documentation
 
 Swagger:
 
-http://localhost:5000/swagger
+http://localhost:8080/swagger
