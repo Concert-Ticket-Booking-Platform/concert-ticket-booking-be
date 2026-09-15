@@ -18,6 +18,8 @@ namespace ConcertTicket.Domain.Entities
 
         public string? LastName { get; set; }
 
+        public string? AvatarUrl { get; set; }
+
         public bool IsActive { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }

@@ -10,6 +10,8 @@ namespace ConcertTicket.Domain.Entities
 
         public string? Description { get; set; }
 
+        public string? ImageUrl { get; set; }
+
         public string Venue { get; set; } = null!;
 
         public DateTimeOffset EventDate { get; set; }

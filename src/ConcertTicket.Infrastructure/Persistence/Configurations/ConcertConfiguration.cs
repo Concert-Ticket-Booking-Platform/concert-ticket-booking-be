@@ -20,6 +20,10 @@ namespace ConcertTicket.Infrastructure.Persistence.Configurations
             builder.Property(x => x.Description)
                 .HasColumnName("description");
 
+            builder.Property(x => x.ImageUrl)
+                .HasColumnName("image_url")
+                .HasMaxLength(1000);
+
             builder.Property(x => x.Venue)
                 .HasColumnName("venue")
                 .HasMaxLength(255)

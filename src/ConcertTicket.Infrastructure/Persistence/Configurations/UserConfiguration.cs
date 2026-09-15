@@ -39,6 +39,10 @@ namespace ConcertTicket.Infrastructure.Persistence.Configurations
                 .HasColumnName("last_name")
                 .HasMaxLength(100);
 
+            builder.Property(x => x.AvatarUrl)
+                .HasColumnName("avatar_url")
+                .HasMaxLength(1000);
+
             builder.Property(x => x.IsActive)
                 .HasColumnName("is_active")
                 .IsRequired();
