@@ -4,6 +4,7 @@ public sealed record ConcertDetailDto(
     Guid Id,
     string ConcertName,
     string? Description,
+    string? ImageUrl,
     string Venue,
     DateTimeOffset EventDate,
     string Status,

@@ -44,6 +44,7 @@ public sealed class ConcertService : IConcertService
                 x.Id,
                 x.ConcertName,
                 x.Description,
+                x.ImageUrl,
                 x.Venue,
                 x.EventDate,
                 x.Status.ToString(),
