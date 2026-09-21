@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IVoucherService, VoucherService>();
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IAdminConcertService, AdminConcertService>();
 
         return services;
     }

@@ -40,6 +40,10 @@ public class GlobalExceptionMiddleware
         {
             httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         }
+        else if (exception is KeyNotFoundException)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
         else if (exception is InvalidOperationException)
         {
             httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
