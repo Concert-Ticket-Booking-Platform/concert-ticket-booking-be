@@ -6,6 +6,8 @@ using ConcertTicket.Application.Concerts.Interfaces;
 using ConcertTicket.Application.Concerts.Services;
 using ConcertTicket.Application.Payments.Interfaces;
 using ConcertTicket.Application.Payments.Services;
+using ConcertTicket.Application.TicketCategories.Interfaces;
+using ConcertTicket.Application.TicketCategories.Services;
 using ConcertTicket.Application.Vouchers.Interfaces;
 using ConcertTicket.Application.Vouchers.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IAdminConcertService, AdminConcertService>();
+        services.AddScoped<IAdminTicketCategoryService, AdminTicketCategoryService>();
 
         return services;
     }
