@@ -46,7 +46,7 @@ public class GlobalExceptionMiddleware
         }
         else if (exception is InvalidOperationException)
         {
-            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
         }
         else if (exception is ArgumentException || exception is ArgumentNullException)
         {
