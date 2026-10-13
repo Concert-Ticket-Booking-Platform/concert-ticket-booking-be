@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IAdminConcertService, AdminConcertService>();
         services.AddScoped<IAdminTicketCategoryService, AdminTicketCategoryService>();
+        services.AddScoped<IAdminVoucherService, AdminVoucherService>();
 
         return services;
     }
