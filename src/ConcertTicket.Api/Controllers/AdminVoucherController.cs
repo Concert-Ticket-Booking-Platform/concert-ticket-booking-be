@@ -1,4 +1,5 @@
-﻿using ConcertTicket.Application.Vouchers.DTOs;
+﻿using ConcertTicket.Application.Common.Models;
+using ConcertTicket.Application.Vouchers.DTOs;
 using ConcertTicket.Application.Vouchers.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,15 +46,20 @@ namespace ConcertTicket.Api.Controllers
         /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(IReadOnlyList<AdminVoucherDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<IReadOnlyList<AdminVoucherDto>>> GetAll(
-            CancellationToken cancellationToken)
+        public async Task<ActionResult<PagedResult<AdminVoucherDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
         {
-            var vouchers = await _voucherService.GetAllAsync(
+            var result = await _voucherService.GetAllAsync(
+                page,
+                pageSize,
                 cancellationToken);
 
-            return Ok(vouchers);
+            return Ok(result);
         }
 
         /// <summary>

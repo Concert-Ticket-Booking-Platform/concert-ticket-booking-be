@@ -1,4 +1,5 @@
-﻿using ConcertTicket.Application.Vouchers.DTOs;
+﻿using ConcertTicket.Application.Common.Models;
+using ConcertTicket.Application.Vouchers.DTOs;
 
 namespace ConcertTicket.Application.Vouchers.Interfaces;
 
@@ -8,7 +9,12 @@ public interface IAdminVoucherService
         CreateVoucherRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<AdminVoucherDto>> GetAllAsync(
+    //Task<IReadOnlyList<AdminVoucherDto>> GetAllAsync(
+    //    CancellationToken cancellationToken = default);
+
+    Task<PagedResult<AdminVoucherDto>> GetAllAsync(
+        int page = 1,
+        int pageSize = 10,
         CancellationToken cancellationToken = default);
 
     Task<AdminVoucherDto> GetByIdAsync(

@@ -1,4 +1,5 @@
 ﻿using ConcertTicket.Application.Common.Interfaces;
+using ConcertTicket.Application.Common.Models;
 using ConcertTicket.Application.Vouchers.DTOs;
 using ConcertTicket.Application.Vouchers.Interfaces;
 using ConcertTicket.Application.Vouchers.Mappers;
@@ -77,18 +78,62 @@ public sealed class AdminVoucherService : IAdminVoucherService
         return VoucherMapper.ToAdminDto(voucher);
     }
 
-    public async Task<IReadOnlyList<AdminVoucherDto>> GetAllAsync(
+
+    public async Task<PagedResult<AdminVoucherDto>> GetAllAsync(
+        int page = 1,
+        int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var vouchers = await _dbContext.Vouchers
-            .AsNoTracking()
+        if (page < 1)
+        {
+            throw new ArgumentException(
+                "Page must be greater than or equal to 1.");
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            throw new ArgumentException(
+                "Page size must be between 1 and 100.");
+        }
+
+        var query = _dbContext.Vouchers.AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var totalPages = (int)Math.Ceiling(
+            totalCount / (double)pageSize);
+
+        var vouchers = await query
             .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return vouchers
+        var items = vouchers
             .Select(VoucherMapper.ToAdminDto)
             .ToList();
+
+        return new PagedResult<AdminVoucherDto>(
+            Items: items,
+            Page: page,
+            PageSize: pageSize,
+            TotalCount: totalCount,
+            TotalPages: totalPages);
     }
+
+    //public async Task<IReadOnlyList<AdminVoucherDto>> GetAllAsync(
+    //    CancellationToken cancellationToken = default)
+    //{
+    //    var vouchers = await _dbContext.Vouchers
+    //        .AsNoTracking()
+    //        .OrderByDescending(x => x.CreatedAt)
+    //        .ToListAsync(cancellationToken);
+
+    //    return vouchers
+    //        .Select(VoucherMapper.ToAdminDto)
+    //        .ToList();
+    //}
 
     public async Task<AdminVoucherDto> GetByIdAsync(
         Guid voucherId,
