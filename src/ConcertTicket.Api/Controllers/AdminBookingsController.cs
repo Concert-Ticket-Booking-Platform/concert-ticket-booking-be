@@ -7,12 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ConcertTicket.Api.Controllers;
 
+[ApiController]
+[Route("api/v1/admin/bookings")]
+[Authorize(Roles = "Admin")]
 public sealed class AdminBookingsController : ControllerBase
 {
     private readonly IAdminBookingService _bookingService;
 
-    public AdminBookingsController(
-        IAdminBookingService bookingService)
+    public AdminBookingsController(IAdminBookingService bookingService)
     {
         _bookingService = bookingService;
     }
@@ -48,10 +50,7 @@ public sealed class AdminBookingsController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var result = await _bookingService.GetByIdAsync(
-            id,
-            cancellationToken);
-
+        var result = await _bookingService.GetByIdAsync(id,cancellationToken);
         return Ok(result);
     }
 }
