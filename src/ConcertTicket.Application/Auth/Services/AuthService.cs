@@ -105,8 +105,8 @@ public sealed class AuthService : IAuthService
             await _dbContext.Users
                 .Include(x => x.Role)
                 .FirstOrDefaultAsync(
-                    x =>
-                        x.Username == request.Username,
+                    x => x.Username == request.Username || 
+                    x.Email == request.Username,
                     cancellationToken);
 
         if (user is null ||
