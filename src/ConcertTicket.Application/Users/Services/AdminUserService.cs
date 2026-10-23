@@ -3,6 +3,8 @@ using ConcertTicket.Application.Common.Models;
 using ConcertTicket.Application.Users.DTOs;
 using ConcertTicket.Application.Users.Interfaces;
 using ConcertTicket.Application.Users.Mappers;
+using ConcertTicket.Domain.Entities;
+using ConcertTicket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConcertTicket.Application.Users.Services;
@@ -10,10 +12,12 @@ namespace ConcertTicket.Application.Users.Services;
 public sealed class AdminUserService : IAdminUserService
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public AdminUserService(IApplicationDbContext dbContext)
+    public AdminUserService(IApplicationDbContext dbContext, IPasswordHasher passwordHasher)
     {
         _dbContext = dbContext;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<PagedResult<AdminUserDto>> GetAllAsync(
@@ -105,6 +109,81 @@ public sealed class AdminUserService : IAdminUserService
             throw new KeyNotFoundException(
                 $"User '{userId}' was not found.");
         }
+
+        return AdminUserMapper.ToDto(user);
+    }
+
+    public async Task<AdminUserDto> CreateAsync(
+        CreateAdminUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        var username = request.Username.Trim();
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email is required.");
+
+        if (string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("Username is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            throw new ArgumentException("Password is required.");
+        }
+
+        if (request.Role != RoleType.Customer &&
+            request.Role != RoleType.Operator)
+        {
+            throw new ArgumentException(
+                "Only Customer and Operator accounts can be created.");
+        }
+
+        var emailExists = await _dbContext.Users
+            .AnyAsync(x => x.Email.ToLower() == email, cancellationToken);
+
+        if (emailExists)
+            throw new InvalidOperationException("Email already exists.");
+
+        var usernameExists = await _dbContext.Users
+            .AnyAsync(
+                x => x.Username.ToLower() == username.ToLower(),
+                cancellationToken);
+
+        if (usernameExists)
+            throw new InvalidOperationException("Username already exists.");
+
+        var roleName = request.Role.ToString();
+
+        var role = await _dbContext.Roles
+            .FirstOrDefaultAsync(
+                x => x.RoleName == roleName,
+                cancellationToken);
+
+        if (role is null)
+        {
+            throw new InvalidOperationException(
+                $"Role '{roleName}' has not been configured.");
+        }
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            Username = username,
+            Password = _passwordHasher.Hash(request.Password),
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            RoleId = role.Id
+        };
+
+        _dbContext.Users.Add(user);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Nạp Role để mapper có thể trả RoleName.
+        user.Role = role;
 
         return AdminUserMapper.ToDto(user);
     }

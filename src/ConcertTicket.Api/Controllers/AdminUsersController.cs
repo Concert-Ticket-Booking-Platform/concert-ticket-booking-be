@@ -19,6 +19,21 @@ public sealed class AdminUsersController : ControllerBase
         _userService = userService;
     }
 
+    [HttpPost]
+    public async Task<ActionResult<AdminUserDto>> Create(
+        [FromBody] CreateAdminUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var created = await _userService.CreateAsync(
+            request,
+            cancellationToken);
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = created.Id },
+            created);
+    }
+
     [HttpGet]
     public async Task<ActionResult<PagedResult<AdminUserDto>>> GetAll(
         [FromQuery] int page = 1,

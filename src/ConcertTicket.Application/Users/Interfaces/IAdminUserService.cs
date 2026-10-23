@@ -17,6 +17,10 @@ public interface IAdminUserService
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task<AdminUserDto> CreateAsync(
+        CreateAdminUserRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<AdminUserDto> UpdateStatusAsync(
         Guid userId,
         bool isActive,
