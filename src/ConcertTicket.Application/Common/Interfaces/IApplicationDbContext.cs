@@ -24,6 +24,8 @@ namespace ConcertTicket.Application.Common.Interfaces
 
         DbSet<PaymentTransaction> PaymentTransactions { get; }
 
+        DbSet<AuditLog> AuditLogs { get; }
+
         Task<int> SaveChangesAsync(
             CancellationToken cancellationToken = default);
 

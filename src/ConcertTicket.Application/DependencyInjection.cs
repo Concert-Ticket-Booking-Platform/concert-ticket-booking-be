@@ -1,4 +1,6 @@
-﻿using ConcertTicket.Application.Auth.Interfaces;
+﻿using ConcertTicket.Application.AuditLogs.Interfaces;
+using ConcertTicket.Application.AuditLogs.Services;
+using ConcertTicket.Application.Auth.Interfaces;
 using ConcertTicket.Application.Auth.Services;
 using ConcertTicket.Application.Bookings.Interfaces;
 using ConcertTicket.Application.Bookings.Services;
@@ -32,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminBookingService, AdminBookingService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IMyAccountService, MyAccountService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
 
         return services;
     }
