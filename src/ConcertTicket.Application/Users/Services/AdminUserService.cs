@@ -1,4 +1,5 @@
-﻿using ConcertTicket.Application.Common.Interfaces;
+﻿using ConcertTicket.Application.AuditLogs.Interfaces;
+using ConcertTicket.Application.Common.Interfaces;
 using ConcertTicket.Application.Common.Models;
 using ConcertTicket.Application.Users.DTOs;
 using ConcertTicket.Application.Users.Interfaces;
@@ -13,11 +14,13 @@ public sealed class AdminUserService : IAdminUserService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IAuditLogService _auditLogService;
 
-    public AdminUserService(IApplicationDbContext dbContext, IPasswordHasher passwordHasher)
+    public AdminUserService(IApplicationDbContext dbContext, IPasswordHasher passwordHasher, IAuditLogService auditLogService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
+        _auditLogService = auditLogService;
     }
 
     public async Task<PagedResult<AdminUserDto>> GetAllAsync(
@@ -216,10 +219,30 @@ public sealed class AdminUserService : IAdminUserService
             return AdminUserMapper.ToDto(user);
         }
 
+        //user.IsActive = isActive;
+        //user.UpdatedAt = DateTimeOffset.UtcNow;
+
+        //await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var oldStatus = user.IsActive;
+
         user.IsActive = isActive;
         user.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _auditLogService.WriteAsync(
+            actorId: actorUserId,
+            actorType: "Admin",
+            action: "User.StatusChanged",
+            resourceType: "User",
+            resourceId: user.Id,
+            metadata: new
+            {
+                oldIsActive = oldStatus,
+                newIsActive = isActive
+            },
+            cancellationToken: cancellationToken);
 
         return AdminUserMapper.ToDto(user);
     }
